@@ -1,0 +1,43 @@
+hack了一个redis版本
+
+主要修改如下；
+1 去除redis lua require 限制
+2 将原本的lua替换为luajit cpu计算性能好
+3 打包了一个lua的mysql客户端
+4 使用了redis rejson这个扩展
+
+
+目的：直接在redis中计算学习进度 测试假如数据都在redis缓存中 单实例1秒可以计算36000多次
+
+环境：centos7
+
+安装步骤：
+1、cd redis-luajit 
+2、make
+3、安装mysql客户端，安装luasql需要mysql client的header头
+[root@1e22d5bb73be software]# yum list installed | grep mysql
+mysql-community-client.x86_64      8.0.21-1.el7               @mysql80-community
+mysql-community-common.x86_64      8.0.21-1.el7               @mysql80-community
+mysql-community-devel.x86_64       8.0.21-1.el7               @mysql80-community
+mysql-community-libs.x86_64        8.0.21-1.el7               @mysql80-community
+mysql-community-server.x86_64      8.0.21-1.el7               @mysql80-community
+mysql80-community-release.noarch   el7-3                      installed
+4、安装luasql
+   cd luasql && make mysql
+   运行完后会在src目录下生成mysql.so文件  将文件复制到/usr/local/lib/lua/5.1/luasql/mysql.so
+
+5、cd redis-luajit && src/redis-server redis.conf
+
+6、运行进度计算
+   redis/src/redis-cli script load "$(cat lua/progress.lua)"
+   会返回一个hash值
+   redis-cli
+   EVALSHA 512e1d4e782a7bdaef959412f0c8ea9c7dd33139 2 210005 1981835
+   其中 210005 是课程ID 1981835 是学生ID
+
+
+
+多实例扩展：
+由于redis只能使用单核 1台机器可以根据cpu核心数可以启动多个实例 根据用户ID和课程ID hash到不同的实例中
+
+通过supervisor管理实例 关闭rdb和rof
